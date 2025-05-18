@@ -1,0 +1,2 @@
+gpio mode PA7 1
+gpio set PA7 0
