@@ -34,22 +34,37 @@ def main(port, script):
     ser = serial.Serial(f"/dev/ttyACM{port}", 115200, timeout=1)
     ser.write(b'\n\r')
     click.echo("connected to: " + ser.portstr)
-    def runjs(file_path, destinationname):
-        with open(file_path, "rb") as file:
+    def upload(file_path_local, destination_remote):
+        # Ensure destination path starts with /ext
+        if not destination_remote.startswith('/ext'):
+            destination_remote = f'/ext{destination_remote}'
+        
+        with open(file_path_local, "r") as file:  # Changed to text mode
             file_data = file.read()
         
-        # Send storage write command and wait for response
-        ser.write(f"storage write /dsh_scripts/{destinationname}\n\r".encode())
+        # Ensure file ends with newline
+        if not file_data.endswith('\n'):
+            file_data += '\n'
+        
+        # Send storage write command
+        ser.write(f"storage write {destination_remote}".encode())
+        ser.write(b'\x0D\x0A')  # Ctrl+Enter
         ser.readline()  # Read the echo of our command
         
-        # Write file data and add final newline
-        ser.write(file_data)
-        ser.write(b'\n\r')
+        # Write file data with proper line endings
+        ser.write(file_data.encode().replace(b'\n', b'\x0D\x0A'))
+        
+        # Send Ctrl+C (ASCII code 0x03) to end write mode
+        ser.write(b'\x03')
+        ser.write(b'\x0D\x0A')  # Ctrl+Enter
         
         # Wait for write completion
-        response = ser.readline()
-        print(f"Uploaded {file_path} to /dsh_scripts/{destinationname}")
-    
+        response = ser.readline().decode('utf-8').strip()
+        if "error" in response.lower():
+            print(f"Upload failed: {response}")
+        else:
+            print(f"Uploaded {file_path_local} to {destination_remote}")
+
     in_block = False
     block_lines = []
     local_vars = {}
@@ -74,13 +89,22 @@ def main(port, script):
             code = stripped[1:-1]
             exec(code, {}, local_vars)
             continue
-        elif line.startswith("js_upload"):
+        elif line.startswith("upload"):
             parts = line.split()
             if len(parts) == 3:
                 file_path = parts[1]
                 destinationname = parts[2]
-                runjs(file_path, destinationname)
+                upload(file_path, destinationname)
                 continue
+        elif line.startswith("js"):
+            parts = line.split()
+            if len(parts) == 2:
+                js_path = parts[1]
+                if not js_path.startswith('/ext'):
+                    js_path = f'/ext{js_path}'
+                ser.write(f"js {js_path}\n\r".encode())
+                click.echo(ser.readline())
+            continue
             
         def repl(match):
             expr = match.group(1)
