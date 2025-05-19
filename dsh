@@ -3,9 +3,7 @@ import serial
 import click
 
 """
-file handling functions
-this is a really old module but it works
-LGPLv3
+Flipper Zero shell script runner
 email: maru@lithium-dev.xyz (pgp attached)
 signal: maru.222
 BTC: 16innLYQtz123HTwNLY3vScPmEVP7tob8u
@@ -15,25 +13,20 @@ XMR: 49dNpgP5QSpPDF1YUVuU3ST2tUWng32m8crGQ4NuM6U44CG1ennTvESWbwK6epkfJ6LuAKYjSDK
 
 @click.command()
 @click.option('-p', '--port', default='0', show_default=True, help='Serial port number')
-@click.argument('script', nargs=-1)
-def read(filename):
-    with open(filename, "r", encoding="utf-8") as file:
-        contents = file.read()
-    return contents
-
+@click.argument('script')
 def main(port, script):
+    with open(script, "r", encoding="utf-8") as file:
+        contents = file.read()
+
     ser = serial.Serial(f"/dev/ttyACM{port}", 115200, timeout=1)
     ser.write(b'\n\r')
 
     click.echo("connected to: " + ser.portstr)
 
-    script_str = ' '.join(script)
-    
-    x = read(script_str)
-
-    for line in x.splitlines():
+    for line in contents.splitlines():
         ser.write(line.encode('utf-8') + b'\n\r')
         click.echo(ser.readline())
 
 if __name__ == '__main__':
     main()
+
