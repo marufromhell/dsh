@@ -1,3 +1,4 @@
+#!/usr/bin/env dsh
 led r 255
 led g 255
 led b 255

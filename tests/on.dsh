@@ -1,2 +1,3 @@
+#!/usr/bin/env dsh
 gpio mode PA7 1
 gpio set PA7 1 1
