@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import serial
 import click
+import re
 
 """
 Flipper Zero shell script runner
@@ -10,6 +11,11 @@ BTC: 16innLYQtz123HTwNLY3vScPmEVP7tob8u
 ETH: 0x48994D78B7090367Aa20FD5470baDceec42cAF62 
 XMR: 49dNpgP5QSpPDF1YUVuU3ST2tUWng32m8crGQ4NuM6U44CG1ennTvESWbwK6epkfJ6LuAKYjSDKqKNtbtJnU71gi6GrF4Wh
 """
+
+def extract_code_blocks(text):
+    """Extract code blocks within curly braces."""
+    pattern = r'\{([^{}]*)\}'
+    return re.findall(pattern, text)
 
 @click.command()
 @click.option('-p', '--port', default='0', show_default=True, help='Serial port number')
@@ -23,10 +29,41 @@ def main(port, script):
 
     click.echo("connected to: " + ser.portstr)
 
+    in_block = False
+    block_lines = []
+    local_vars = {}
     for line in contents.splitlines():
-        ser.write(line.encode('utf-8') + b'\n\r')
+        stripped = line.strip()
+        if not in_block and stripped.startswith("{") and not stripped.endswith("}"):
+            in_block = True
+            block_lines = [stripped.lstrip("{")]
+            continue
+        elif in_block:
+            if stripped.endswith("}"):
+                block_lines.append(stripped.rstrip("}"))
+                code = "\n".join(block_lines)
+                print("EXECUTING BLOCK:\n", code)  # Debug print
+                exec(code, {}, local_vars)
+                in_block = False
+                block_lines = []
+            else:
+                block_lines.append(line)
+            continue
+        elif stripped.startswith("{") and stripped.endswith("}"):
+            code = stripped[1:-1]
+            exec(code, {}, local_vars)
+            continue
+
+        def repl(match):
+            expr = match.group(1)
+            try:
+                return str(eval(expr, {}, local_vars))
+            except Exception as e:
+                return f"<ERR:{e}>"
+
+        processed_line = re.sub(r'\{([^{}]+)\}', repl, line)
+        ser.write(processed_line.encode('utf-8') + b'\n\r')
         click.echo(ser.readline())
 
 if __name__ == '__main__':
     main()
-
