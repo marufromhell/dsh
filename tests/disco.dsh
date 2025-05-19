@@ -1,0 +1,289 @@
+led r 255
+led g 255
+led b 255
+{import time}
+{time.sleep(3)}
+led r 0
+led g 0
+led b 0
+{print({"hello", "world"})}
+
+led r 255
+{time.sleep(1)}
+led r 0
+{time.sleep(1)}
+led g 255
+{time.sleep(1)}
+led g 0
+{time.sleep(1)}
+led b 255
+{time.sleep(1)}
+led b 0
+{time.sleep(1)}
+led bl 255
+{time.sleep(1)}
+led bl 0
+{time.sleep(1)}
+led bl 127
+{time.sleep(1)}
+
+
+
+
+
+{#clear}
+led r 0
+led g 0
+led b 0
+{#set}
+led r 255
+led g 255
+{time.sleep(1)}
+led r 0
+led b 255
+{time.sleep(1)}
+led g 0
+{time.sleep(1)}
+
+{time.sleep(3)}
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+time.sleep(3)
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
+
+led r 255
+led g 255
+led r 0
+led b 255
+led g 0
+
+led r 255
+led r 0
+led g 255
+led g 0
+led b 255
+led b 0
