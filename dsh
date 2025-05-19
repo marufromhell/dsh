@@ -13,21 +13,6 @@ def main(port, script):
     ser = serial.Serial(f"/dev/ttyACM{port}", 115200, timeout=1)
     ser.write(b'\n\r')
     click.echo("connected to: " + ser.portstr)
-    def runjs(file_path, destinationname):
-        with open(file_path, "rb") as file:
-            file_data = file.read()
-        
-        # Send storage write command and wait for response
-        ser.write(f"storage write /dsh_scripts/{destinationname}\n\r".encode())
-        ser.readline()  # Read the echo of our command
-        
-        # Write file data and add final newline
-        ser.write(file_data)
-        ser.write(b'\n\r')
-        
-        # Wait for write completion
-        response = ser.readline()
-        print(f"Uploaded {file_path} to /dsh_scripts/{destinationname}")
     
     in_block = False
     block_lines = []
