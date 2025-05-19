@@ -1,34 +1,34 @@
-#!/usr/bin/env python3
-import serial
-import click
-import re
-
-"""
-Flipper Zero shell script runner
-email: maru@lithium-dev.xyz (pgp attached)
-signal: maru.222
-BTC: 16innLYQtz123HTwNLY3vScPmEVP7tob8u
-ETH: 0x48994D78B7090367Aa20FD5470baDceec42cAF62 
-XMR: 49dNpgP5QSpPDF1YUVuU3ST2tUWng32m8crGQ4NuM6U44CG1ennTvESWbwK6epkfJ6LuAKYjSDKqKNtbtJnU71gi6GrF4Wh
-"""
-
-def extract_code_blocks(text):
-    """Extract code blocks within curly braces."""
-    pattern = r'\{([^{}]*)\}'
-    return re.findall(pattern, text)
-
 @click.command()
 @click.option('-p', '--port', default='0', show_default=True, help='Serial port number')
 @click.argument('script')
 def main(port, script):
+    # Add script directory to Python path
+    script_dir = os.path.dirname(os.path.abspath(script))
+    if script_dir not in sys.path:
+        sys.path.insert(0, script_dir)
+
     with open(script, "r", encoding="utf-8") as file:
         contents = file.read()
 
     ser = serial.Serial(f"/dev/ttyACM{port}", 115200, timeout=1)
     ser.write(b'\n\r')
-
     click.echo("connected to: " + ser.portstr)
-
+    def runjs(file_path, destinationname):
+        with open(file_path, "rb") as file:
+            file_data = file.read()
+        
+        # Send storage write command and wait for response
+        ser.write(f"storage write /dsh_scripts/{destinationname}\n\r".encode())
+        ser.readline()  # Read the echo of our command
+        
+        # Write file data and add final newline
+        ser.write(file_data)
+        ser.write(b'\n\r')
+        
+        # Wait for write completion
+        response = ser.readline()
+        print(f"Uploaded {file_path} to /dsh_scripts/{destinationname}")
+    
     in_block = False
     block_lines = []
     local_vars = {}
@@ -53,7 +53,14 @@ def main(port, script):
             code = stripped[1:-1]
             exec(code, {}, local_vars)
             continue
-
+        elif line.startswith("js_upload"):
+            parts = line.split()
+            if len(parts) == 3:
+                file_path = parts[1]
+                destinationname = parts[2]
+                runjs(file_path, destinationname)
+                continue
+            
         def repl(match):
             expr = match.group(1)
             try:
@@ -64,6 +71,3 @@ def main(port, script):
         processed_line = re.sub(r'\{([^{}]+)\}', repl, line)
         ser.write(processed_line.encode('utf-8') + b'\n\r')
         click.echo(ser.readline())
-
-if __name__ == '__main__':
-    main()
