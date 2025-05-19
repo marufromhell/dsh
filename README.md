@@ -9,3 +9,4 @@ If your flipper is on a different tty, use -d # to specify ACM number
 just put flipper cli commands, not much advanced syntax is supported.  
 
 # install  
+git clone https://github.com/marufromhell/dsh.git && cd dsh && mv dsh ~/.local/bin/dsh
