@@ -1,0 +1,8 @@
+{
+import hex
+}
+{#clear}
+{#set}
+led r {hex.rgb[0]}
+led g {hex.rgb[1]}
+led b {hex.rgb[2]}
