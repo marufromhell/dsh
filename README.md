@@ -6,7 +6,8 @@ If your flipper is on a different tty, use -d # to specify ACM number
 - -d Device number(default 0)  
 - dsh script  
 #  dsh scripting  
-just put flipper cli commands, not much advanced syntax is supported.  
-
+Flipper cli commands are put normally  
+Python is wrapped in curly brackets  
+Python support is extremely limited so i would recomend using a python module and importing it.  
 # install  
 git clone https://github.com/marufromhell/dsh.git && cd dsh && mv dsh ~/.local/bin/dsh
