@@ -10,6 +10,7 @@ Flipper cli commands are put normally
 Python is wrapped in curly brackets  
 Python support is extremely limited so i would recomend using a python module and importing it. 
 To comment just use {#comment}  
+Javascript can be uploaded with "upload LOCAL_NAME REMOTE_NAME" but it sucks so maybe dont use it  
 
 I found a really hacky way to support dsh scripting in vscode, just click on "plain text" at bottom right while editing a script, and configure file association for ".dsh" as Lua. There pretty similar and wont throw hundreds of errors like python.  
 
