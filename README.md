@@ -1,4 +1,4 @@
-Script runner for the flipper zero.  
+Python cli script runner for the flipper zero with python and js***** support.   
 You must have a active serial connection usually /dev/ttyACM0  
 If your flipper is on a different tty, use -d # to specify ACM number  
   
