@@ -16,3 +16,10 @@ I found a really hacky way to support dsh scripting in vscode, just click on "pl
 
 # install  
 git clone https://github.com/marufromhell/dsh.git && cd dsh && mv dsh ~/.local/bin/dsh
+
+
+
+
+# GOALS  
+* Onboard python using mp-flipper or similar.
+* Better file handling functions.
