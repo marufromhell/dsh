@@ -10,8 +10,9 @@ Flipper cli commands are put normally
 Python is wrapped in curly brackets  
 To inline comment just use {#comment}  
 if you want a full line comment use:  
-`#comment`
+`#comment`  
 Javascript can be uploaded with "upload LOCAL_NAME REMOTE_PATH" and run it with cli commands. but it sucks so maybe dont use it  
+If you want to use micropython(COMPLETELY UNSUPPORTED BTW), you can also use upload, because its no longer language specific
 
 I found a really hacky way to support dsh scripting in vscode, just click on "plain text" at bottom right while editing a script, and configure file association for ".dsh" as Lua. There pretty similar and wont throw hundreds of errors like python.  
 
