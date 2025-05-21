@@ -8,8 +8,9 @@ If your flipper is on a different tty, use -d # to specify ACM number
 #  dsh scripting  
 Flipper cli commands are put normally  
 Python is wrapped in curly brackets  
-Python support is extremely limited so i would recomend using a python module and importing it. 
-To comment just use {#comment}  
+To inline comment just use {#comment}  
+if you want a full line comment use:  
+`#comment`
 Javascript can be uploaded with "upload LOCAL_NAME REMOTE_PATH" and run it with cli commands. but it sucks so maybe dont use it  
 
 I found a really hacky way to support dsh scripting in vscode, just click on "plain text" at bottom right while editing a script, and configure file association for ".dsh" as Lua. There pretty similar and wont throw hundreds of errors like python.  
@@ -17,7 +18,7 @@ I found a really hacky way to support dsh scripting in vscode, just click on "pl
 # install  
 git clone https://github.com/marufromhell/dsh.git && cd dsh && mv dsh ~/.local/bin/dsh
 
-
+# Read the wiki bruz
 
 
 # GOALS  
