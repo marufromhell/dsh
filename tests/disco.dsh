@@ -79,7 +79,7 @@ led g 0
 led b 255
 led b 0
 
-time.sleep(3)
+{time.sleep(3)}
 
 led r 255
 led g 255
@@ -288,3 +288,9 @@ led g 255
 led g 0
 led b 255
 led b 0
+
+led r 0
+led g 0
+led b 0
+led bl 127
+{print("!  success  !")}

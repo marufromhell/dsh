@@ -1,0 +1,7 @@
+{x=9}
+{y=10}
+{z=x+y}
+{
+if z == 19:
+    print("!  success  !")
+}

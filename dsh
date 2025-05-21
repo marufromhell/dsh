@@ -4,7 +4,6 @@ import click
 import re
 import sys
 import os
-
 """
 Flipper Zero shell script runner
 email: maru@lithium-dev.xyz
@@ -13,29 +12,51 @@ BTC: 16innLYQtz123HTwNLY3vScPmEVP7tob8u
 ETH: 0x48994D78B7090367Aa20FD5470baDceec42cAF62 
 XMR: 49dNpgP5QSpPDF1YUVuU3ST2tUWng32m8crGQ4NuM6U44CG1ennTvESWbwK6epkfJ6LuAKYjSDKqKNtbtJnU71gi6GrF4Wh
 """
-
-def extract_code_blocks(text):
-    """Extract code blocks within curly braces."""
-    pattern = r'\{([^{}]*)\}'
-    return re.findall(pattern, text)
-
 @click.command()
 @click.option('-p', '--port', default='0', show_default=True, help='Serial port number')
+@click.option('-V', '--verbose', is_flag=True, help='Enable verbose output')
 @click.argument('script')
-def main(port, script):
+
+def main(port, script, verbose):
+    
+    if verbose:    click.echo("dsh v1.0h4")
+    if verbose:    click.echo("main called")
     # Add script directory to Python path
+    if verbose:    click.echo("adding path")
     script_dir = os.path.dirname(os.path.abspath(script))
     if script_dir not in sys.path:
         sys.path.insert(0, script_dir)
-
+    if verbose:    click.echo("success!")
+    if verbose:    click.echo("running script: " + script)
     with open(script, "r", encoding="utf-8") as file:
         contents = file.read()
+    if verbose:    click.echo("script loaded")
+    if verbose:    click.echo("connecting to flipper on /dev/ttyACM" + str(port))
+    try:
+        global ser
+        ser = serial.Serial(f"/dev/ttyACM{port}", 115200, timeout=1)
+        ser.write(b'\n\r')
+        # Wait for initial response
+        response = ser.readline()
+        if not response:
+            click.echo("Error: No response from Flipper Zero")
+            sys.exit(1)
+            
+        click.echo(f"connected to: {ser.portstr}")
+        
+        # READ ASCII ART with timeout
+        counter = 0
+        while counter < 27:
+            line = ser.readline()
+            counter += 1
+            
+        if verbose:    click.echo("ascii art read")
+    except serial.SerialException as e:
+        click.echo(f"Error connecting to Flipper Zero: {e}")
+        sys.exit(1)
 
-    ser = serial.Serial(f"/dev/ttyACM{port}", 115200, timeout=1)
-    ser.write(b'\n\r')
-    click.echo("connected to: " + ser.portstr)
+    #this is a weird spot for this function, but it needs ser to be defined before the function is defined.
     def upload(file_path_local, destination_remote):
-        # Ensure destination path starts with /ext
         if not destination_remote.startswith('/ext'):
             destination_remote = f'/ext{destination_remote}'
         
@@ -47,9 +68,9 @@ def main(port, script):
             file_data += '\n'
         
         # Send storage write command
-        ser.write(f"storage write {destination_remote}".encode())
+        ser.write(f"storage write {destination_remote}".encode()) #hate the game not the player, i genuinly had no clue how to do ascii operations over serial before this
         ser.write(b'\x0D\x0A')  # Ctrl+Enter
-        ser.readline()  # Read the echo of our command
+        ser.readline()
         
         # Write file data with proper line endings
         ser.write(file_data.encode().replace(b'\n', b'\x0D\x0A'))
@@ -57,28 +78,30 @@ def main(port, script):
         # Send Ctrl+C (ASCII code 0x03) to end write mode
         ser.write(b'\x03')
         ser.write(b'\x0D\x0A')  # Ctrl+Enter
-        
-        # Wait for write completion
+
         response = ser.readline().decode('utf-8').strip()
         if "error" in response.lower():
-            print(f"Upload failed: {response}")
+            click.echo(f"Upload failed: {response}")
         else:
-            print(f"Uploaded {file_path_local} to {destination_remote}")
-
+            if verbose:    click.echo(f"Uploaded {file_path_local} to {destination_remote}")
+    if verbose:    click.echo("starting interpreter")
     in_block = False
     block_lines = []
     local_vars = {}
     for line in contents.splitlines():
         stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
         if not in_block and stripped.startswith("{") and not stripped.endswith("}"):
             in_block = True
             block_lines = [stripped.lstrip("{")]
             continue
         elif in_block:
+            if verbose:    click.echo("block found")
             if stripped.endswith("}"):
                 block_lines.append(stripped.rstrip("}"))
                 code = "\n".join(block_lines)
-                print("EXECUTING BLOCK:\n", code)  # Debug print
+                if verbose:    click.echo(f"EXECUTING BLOCK:\n {str(code)}")
                 exec(code, {}, local_vars)
                 in_block = False
                 block_lines = []
@@ -95,16 +118,10 @@ def main(port, script):
                 file_path = parts[1]
                 destinationname = parts[2]
                 upload(file_path, destinationname)
-                continue
-        elif line.startswith("js"):
-            parts = line.split()
-            if len(parts) == 2:
-                js_path = parts[1]
-                if not js_path.startswith('/ext'):
-                    js_path = f'/ext{js_path}'
-                ser.write(f"js {js_path}\n\r".encode())
                 click.echo(ser.readline())
-            continue
+                if verbose:    click.echo("Uploaded " + file_path + " to " + destinationname)
+                continue
+        
             
         def repl(match):
             expr = match.group(1)
@@ -113,9 +130,18 @@ def main(port, script):
             except Exception as e:
                 return f"<ERR:{e}>"
 
-        processed_line = re.sub(r'\{([^{}]+)\}', repl, line)
+        processed_line = re.sub(r'\{([^{}]+)\}', repl, line) #lowkey forgot i forgot to use the extract_code_block function but this works better
         ser.write(processed_line.encode('utf-8') + b'\n\r')
         click.echo(ser.readline())
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        click.echo("\nExiting...")
+        ser.close()
+        sys.exit(0)
+    except Exception as e:
+        click.echo(f"An error occurred: {e}")
+        sys.exit(1)
+

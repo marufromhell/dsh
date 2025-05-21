@@ -2,7 +2,7 @@ import tkinter as tk
 import serial
 num = int(input("Enter the number of the port: "))
 ser = serial.Serial(f"/dev/ttyACM{num}", 115200, timeout=1)
-print("connected to: " + ser.portstr)
+print("connected to: ", ser.portstr)
 def foo():
     print("On!")
     
