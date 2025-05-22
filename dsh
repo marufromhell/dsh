@@ -77,7 +77,9 @@ def main(port, script, verbose):
         
         # Send Ctrl+C (ASCII code 0x03) to end write mode
         ser.write(b'\x03')
-        ser.write(b'\x0D\x0A')  # Ctrl+Enter
+        ser.write(b'\r\n')
+        ser.readline()
+        ser.readline()
 
         response = ser.readline().decode('utf-8').strip()
         if "error" in response.lower():
@@ -121,8 +123,6 @@ def main(port, script, verbose):
                 click.echo(ser.readline())
                 if verbose:    click.echo("Uploaded " + file_path + " to " + destinationname)
                 continue
-        
-            
         def repl(match):
             expr = match.group(1)
             try:
@@ -131,8 +131,21 @@ def main(port, script, verbose):
                 return f"<ERR:{e}>"
 
         processed_line = re.sub(r'\{([^{}]+)\}', repl, line) #lowkey forgot i forgot to use the extract_code_block function but this works better
+        
+        #reg case
         ser.write(processed_line.encode('utf-8') + b'\n\r')
-        click.echo(ser.readline())
+        response = ser.readline()
+        if response:
+            click.echo(response.decode('utf-8', errors='replace').strip())
+            
+        while True:
+            response = ser.readline()
+            if not response or response == b'\r\n':
+                break
+            try:
+                click.echo(response.decode('utf-8', errors='replace').strip())
+            except UnicodeDecodeError:
+                click.echo(response)
 
 if __name__ == '__main__':
     try:
@@ -143,5 +156,4 @@ if __name__ == '__main__':
         sys.exit(0)
     except Exception as e:
         click.echo(f"An error occurred: {e}")
-        sys.exit(1)
 

@@ -1,0 +1,35 @@
+#!/usr/bin/env dsh
+#inline python
+{#var test}
+{x=11}
+{y=22}
+{z=33}
+{if x+y+z > 1:  print("!  Success  !") }
+
+#inline function test
+{def test(): return 1}
+{
+if test() == 1:
+    print("!  Success  !")
+else:
+    print("!  Failure  !")
+}
+{import time}
+{test()}
+{time.sleep(1)}
+{test()}
+#outline python
+{import full_test}
+{print("!  Success  !")}
+
+?
+
+hello_world
+
+
+#javascript
+upload full_test.js /ext/dsh_scripts/full_test1.js
+
+js /ext/dsh_scripts/full_test1.js
+hello_world {#because of the way javascript works on the flipper, you need a cli command after the js command, the specific command is not important, but it must be there}
+
