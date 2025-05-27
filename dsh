@@ -4,6 +4,70 @@ import click
 import re
 import sys
 import os
+r=0
+g=0
+b=0
+bl=0
+class MockSerial:
+    def __init__(self, *args, **kwargs):
+        self.portstr = kwargs.get('port', '/dev/ttyACM0')
+        self.buffer = []
+        self.closed = False
+        self.r = 0
+        self.g = 0
+        self.b = 0
+        self.bl = 0
+
+    def write(self, data):
+        click.echo(f"[MOCK SERIAL WRITE] {data!r}")
+        self.buffer.append(data)
+
+    def readline(self):
+        if self.buffer:
+            last = self.buffer[-1]
+            if b'upload' in last:
+                return b"Writing to storage...\n"
+            elif b'\x03' in last:
+                return b"Write complete\n"
+            elif b'led' in last:
+                parts = last.split()
+                if len(parts) == 3:
+                    color = parts[1].decode() if isinstance(parts[1], bytes) else str(parts[1])
+                    rgb = parts[2].decode() if isinstance(parts[2], bytes) else str(parts[2])
+                    try:
+                        rgb_val = int(rgb)
+                    except ValueError:
+                        click.echo(f"Invalid RGB value: {rgb}\nsetting to 0")
+                        rgb_val = 0
+                    if color == "r":
+                        if rgb_val == 0:
+                            self.r = 0
+                        else:
+                            self.r += rgb_val
+                    elif color == "g":
+                        if rgb_val == 0:
+                            self.g = 0
+                        else:
+                            self.g += rgb_val
+                    elif color == "b":
+                        if rgb_val == 0:
+                            self.b = 0
+                        else:
+                            self.b += rgb_val
+                    elif color == "bl":
+                        if rgb_val == 0:
+                            self.bl = 0
+                        else:
+                            self.bl += rgb_val
+                    click.echo(f"LED color added to {color} with RGB value {rgb_val}")
+                    click.echo(f"current color: r:{self.r} g:{self.g} b:{self.b} bl:{self.bl}")
+                    return f"LED {color} set to {rgb_val}\n".encode()
+        return b"MOCK RESPONSE\n"
+
+    def close(self):
+        self.closed = True
+        print("[MOCK SERIAL CLOSED]")
+    
 """
 Flipper Zero shell script runner
 email: maru@lithium-dev.xyz
@@ -15,11 +79,17 @@ XMR: 49dNpgP5QSpPDF1YUVuU3ST2tUWng32m8crGQ4NuM6U44CG1ennTvESWbwK6epkfJ6LuAKYjSDK
 @click.command()
 @click.option('-p', '--port', default='0', show_default=True, help='Serial port number')
 @click.option('-V', '--verbose', is_flag=True, help='Enable verbose output')
+@click.option('-m', '--mock', is_flag=True, help='mock serial port')
 @click.argument('script')
-
-def main(port, script, verbose):
+def main(port, script, verbose, mock):
+    global ser
+    if mock:
+        ser = MockSerial(port=port)
+        click.echo("Mock serial port initialized.")
+        click.echo(f"Connected to: {ser.portstr}")
+        click.echo("Running in mock mode.")
     
-    if verbose:    click.echo("dsh v1.0h4")
+    if verbose:    click.echo("dsh m1.0h5")
     if verbose:    click.echo("main called")
     # Add script directory to Python path
     if verbose:    click.echo("adding path")
@@ -33,8 +103,8 @@ def main(port, script, verbose):
     if verbose:    click.echo("script loaded")
     if verbose:    click.echo("connecting to flipper on /dev/ttyACM" + str(port))
     try:
-        global ser
-        ser = serial.Serial(f"/dev/ttyACM{port}", 115200, timeout=1)
+        if not mock:
+            ser = serial.Serial(f"/dev/ttyACM{port}", 115200, timeout=1)
         ser.write(b'\n\r')
         # Wait for initial response
         response = ser.readline()
@@ -51,7 +121,11 @@ def main(port, script, verbose):
             counter += 1
             
         if verbose:    click.echo("ascii art read")
-    except serial.SerialException as e:
+    except KeyboardInterrupt:
+        click.echo("\nExiting...")
+        ser.close()
+        sys.exit(0)
+    except Exception as e:
         click.echo(f"Error connecting to Flipper Zero: {e}")
         sys.exit(1)
 
