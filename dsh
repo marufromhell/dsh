@@ -4,6 +4,7 @@ import click
 import re
 import sys
 import os
+import time
 """
 Flipper Zero shell script runner
 email: maru@lithium-dev.xyz
@@ -12,14 +13,101 @@ BTC: 16innLYQtz123HTwNLY3vScPmEVP7tob8u
 ETH: 0x48994D78B7090367Aa20FD5470baDceec42cAF62 
 XMR: 49dNpgP5QSpPDF1YUVuU3ST2tUWng32m8crGQ4NuM6U44CG1ennTvESWbwK6epkfJ6LuAKYjSDKqKNtbtJnU71gi6GrF4Wh
 """
+
+
+# todo:
+# fix javascript eof
+# mock serial for testing(on my other laptop that i dont have rn)
+# better logging
+# cleanup serial functions
+# cleanup code                                                                      done
+# Windows support                                                                   mostly done, but not tested
+# adding a way to save stdout to a python variable for grep like functions
+
+# flipper restarts without closing script. because micropython uses so much ram it needs to restart before running a script.
+
+# LINE COUNTER FOR ERRORS                                                           mostly done
+
+# Better documentation
+# hide upload stdout from user - goes along with fixing the javascript eof
+
+
+
+
+VERSION = "1.0h4"
+BAUD_RATE = 230400 # i cant belive i was using 115200 for so long.
+SERIAL_TIMEOUT = 1
+ASCII_ART_LINES = 27
+JS_TIMEOUT = 5  # Timeout for JavaScript commands in seconds
+
+
+
+
+def upload(file_path_local, destination_remote):
+    """Uploads a file to the Flipper Zero's external storage."""
+    if not destination_remote.startswith('/ext'):
+        destination_remote = f'/ext{destination_remote}'
+    if not os.path.exists(file_path_local):
+        click.echo(f"Error: File {file_path_local} does not exist.")
+        sys.exit(1)
+    
+    with open(file_path_local, "r") as file:
+        file_data = file.read()
+    
+    if not file_data.endswith('\n'):
+        file_data += '\n'
+    
+    # Send storage write command
+    ser.write(f"storage write {destination_remote}".encode())
+    ser.write(b'\x0D\x0A')
+    
+    # Wait for write mode confirmation
+    while True:
+        response = ser.readline()
+        if not response:
+            break
+        if b'>' in response:  # Wait for prompt
+            break
+    
+    # Write file data with proper line endings
+    ser.write(file_data.encode().replace(b'\n', b'\x0D\x0A'))
+    ser.write(b'\x03')  # Ctrl+C to end write mode
+    ser.write(b'\r\n')
+    
+    # Wait for completion
+    buffer = []
+    while True:
+        response = ser.readline()
+        if not response:
+            continue
+            
+        try:
+            decoded = response.decode('utf-8').strip()
+            if decoded:
+                buffer.append(decoded)
+            if '>:' in decoded or "error" in decoded.lower():
+                break
+        except UnicodeDecodeError:
+            continue
+    
+    # Check for errors in the complete response
+    full_response = '\n'.join(buffer)
+    if "error" in full_response.lower():
+        click.echo(f"Upload failed: {full_response}")
+    else:
+        click.echo(f"Uploaded {file_path_local} to {destination_remote}")
+
 @click.command()
 @click.option('-p', '--port', default='0', show_default=True, help='Serial port number')
 @click.option('-V', '--verbose', is_flag=True, help='Enable verbose output')
 @click.argument('script')
 
 def main(port, script, verbose):
-    
-    if verbose:    click.echo("dsh v1.0h4")
+
+
+    #Read script and log information
+    global ser
+    if verbose:    click.echo(f"dsh {VERSION}")
     if verbose:    click.echo("main called")
     # Add script directory to Python path
     if verbose:    click.echo("adding path")
@@ -32,10 +120,33 @@ def main(port, script, verbose):
         contents = file.read()
     if verbose:    click.echo("script loaded")
     if verbose:    click.echo("connecting to flipper on /dev/ttyACM" + str(port))
+
+
+
+
+
+    #INITIALIZE SERIAL AND READ ASCII ART
     try:
-        global ser
-        ser = serial.Serial(f"/dev/ttyACM{port}", 115200, timeout=1)
-        ser.write(b'\n\r')
+        if os.name != 'posix':
+            click.echo("Error: This script is designed to run on Fedora or other Linux systems with ACM drivers.\n This has not been tested on windows, Bsd and Darwin are likely not going to work either due to driver differences.\nAny errors you may encounter are likely not going to be fixed.")
+            ser = serial.Serial(
+                port=f"COM{port}",
+                baudrate=BAUD_RATE,
+                timeout=SERIAL_TIMEOUT,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE
+            )
+        else:
+            ser = serial.Serial(
+                port=f"/dev/ttyACM{port}",
+                baudrate=BAUD_RATE,
+                timeout=SERIAL_TIMEOUT,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE
+            )
+            ser.write(b'\n\r')  # Send initial newline to Flipper Zero
         # Wait for initial response
         response = ser.readline()
         if not response:
@@ -45,107 +156,169 @@ def main(port, script, verbose):
         click.echo(f"connected to: {ser.portstr}")
         
         # READ ASCII ART with timeout
-        counter = 0
+        counter = ASCII_ART_LINES
+        if verbose:    click.echo("reading ascii art")
         while counter < 27:
             line = ser.readline()
             counter += 1
+            if verbose:    click.echo("ascii art read")
             
-        if verbose:    click.echo("ascii art read")
     except serial.SerialException as e:
         click.echo(f"Error connecting to Flipper Zero: {e}")
         sys.exit(1)
 
-    #this is a weird spot for this function, but it needs ser to be defined before the function is defined.
-    def upload(file_path_local, destination_remote):
-        if not destination_remote.startswith('/ext'):
-            destination_remote = f'/ext{destination_remote}'
-        
-        with open(file_path_local, "r") as file:  # Changed to text mode
-            file_data = file.read()
-        
-        # Ensure file ends with newline
-        if not file_data.endswith('\n'):
-            file_data += '\n'
-        
-        # Send storage write command
-        ser.write(f"storage write {destination_remote}".encode()) #hate the game not the player, i genuinly had no clue how to do ascii operations over serial before this
-        ser.write(b'\x0D\x0A')  # Ctrl+Enter
-        ser.readline()
-        
-        # Write file data with proper line endings
-        ser.write(file_data.encode().replace(b'\n', b'\x0D\x0A'))
-        
-        # Send Ctrl+C (ASCII code 0x03) to end write mode
-        ser.write(b'\x03')
-        ser.write(b'\r\n')
-        ser.readline()
-        ser.readline()
 
-        response = ser.readline().decode('utf-8').strip()
-        if "error" in response.lower():
-            click.echo(f"Upload failed: {response}")
-        else:
-            if verbose:    click.echo(f"Uploaded {file_path_local} to {destination_remote}")
+
+
+    
+
+
+
+    #INTERPRET DSH, AND INTERPRET PYTHON BLOCKS
     if verbose:    click.echo("starting interpreter")
     in_block = False
     block_lines = []
     local_vars = {}
-    for line in contents.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        if not in_block and stripped.startswith("{") and not stripped.endswith("}"):
-            in_block = True
-            block_lines = [stripped.lstrip("{")]
-            continue
-        elif in_block:
-            if verbose:    click.echo("block found")
-            if stripped.endswith("}"):
-                block_lines.append(stripped.rstrip("}"))
-                code = "\n".join(block_lines)
-                if verbose:    click.echo(f"EXECUTING BLOCK:\n {str(code)}")
-                exec(code, {}, local_vars)
-                in_block = False
-                block_lines = []
-            else:
-                block_lines.append(line)
-            continue
-        elif stripped.startswith("{") and stripped.endswith("}"):
-            code = stripped[1:-1]
-            exec(code, {}, local_vars)
-            continue
-        elif line.startswith("upload"):
-            parts = line.split()
-            if len(parts) == 3:
-                file_path = parts[1]
-                destinationname = parts[2]
-                upload(file_path, destinationname)
-                click.echo(ser.readline())
-                if verbose:    click.echo("Uploaded " + file_path + " to " + destinationname)
-                continue
-        def repl(match):
-            expr = match.group(1)
-            try:
-                return str(eval(expr, {}, local_vars))
-            except Exception as e:
-                return f"<ERR:{e}>"
 
-        processed_line = re.sub(r'\{([^{}]+)\}', repl, line) #lowkey forgot i forgot to use the extract_code_block function but this works better
-        
-        #reg case
-        ser.write(processed_line.encode('utf-8') + b'\n\r')
-        response = ser.readline()
-        if response:
-            click.echo(response.decode('utf-8', errors='replace').strip())
-            
-        while True:
-            response = ser.readline()
-            if not response or response == b'\r\n':
-                break
-            try:
-                click.echo(response.decode('utf-8', errors='replace').strip())
-            except UnicodeDecodeError:
-                click.echo(response)
+
+    line_count = 1  # Start from line 1 instead of 0
+    for line in contents.splitlines():
+        try:
+            stripped = line.strip()
+
+            # Skip empty lines and comments but still count them
+            if not stripped or stripped.startswith("#"):
+                line_count += 1
+                continue
+
+            if not in_block and stripped.startswith("{") and not stripped.endswith("}"):
+                in_block = True
+                block_lines = [(stripped.lstrip("{"), line_count)]  # Store line number with content
+                line_count += 1
+                continue
+
+            elif in_block:
+                if verbose:    click.echo(f"block found at line {line_count}")
+                if stripped.endswith("}"):
+                    block_lines.append((stripped.rstrip("}"), line_count))
+                    code = "\n".join(line for line, _ in block_lines)
+                    try:
+                        if verbose:    click.echo(f"EXECUTING BLOCK:\n{code}, starting at line: {block_lines[0][1]}")
+                        exec(code, {}, local_vars)
+                    except Exception as e:
+                        click.echo(f"Error in block starting at line {block_lines[0][1]}: {str(e)}")
+                    in_block = False
+                    block_lines = []
+                else:
+                    block_lines.append((line, line_count))
+                line_count += 1
+                continue
+
+            elif stripped.startswith("{") and stripped.endswith("}"):
+                if verbose:    click.echo(f"full block found at line {line_count}")
+                code = stripped[1:-1]
+                try:
+                    exec(code, {}, local_vars)
+                except Exception as e:
+                    click.echo(f"Error at line {line_count}: {str(e)}")
+                line_count += 1
+                continue
+
+            # Add line numbers to other error messages
+            elif line.startswith("upload"):
+                parts = line.split()
+                if len(parts) == 3:
+                    file_path = parts[1]
+                    destinationname = parts[2]
+                    try:
+                        upload(file_path, destinationname)
+                        click.echo(ser.readline())
+                        if verbose:    click.echo(f"Uploaded {file_path} to {destinationname}")
+                    except Exception as e:
+                        click.echo(f"Upload error at line {line_count}: {str(e)}")
+                else:
+                    click.echo(f"Error at line {line_count}: Invalid upload command format. Use 'upload <local_file_path> <remote_destination>'")
+                    sys.exit(1)
+
+            elif line == "readline":                                                                   # readline hotfix
+                click.echo(ser.readline().decode('utf-8').strip())
+                ser.write(b'\n\r')
+                continue
+
+            # PYTHON REGULAR EXPRESSION EVALUATION
+            def repl(match):
+                expr = match.group(1)
+                try:
+                    return str(eval(expr, {}, local_vars))
+                except Exception as e:
+                    return f"<ERR:{e}>"
+
+            processed_line = re.sub(r'\{([^{}]+)\}', repl, line)                                       #assumes python has been executed, filters out python expressions in curly braces
+
+
+
+
+            if not processed_line.startswith('js '):                                                   # If the line does not start with 'js ', it is a regular command                  
+                ser.write(processed_line.encode('utf-8') + b'\n\r')
+                time.sleep(0.1)  
+                
+                # Read with timeout
+                start_time = time.time()
+                jstimeout = JS_TIMEOUT
+                buffer = []
+                
+                while (time.time() - start_time) < jstimeout:
+                    response = ser.readline()
+                    if not response:
+                        if verbose:    click.echo("No response received, exiting read loop")
+                        break
+                        
+                    try:
+                        decoded = response.decode('utf-8', errors='replace').strip()
+                        if not decoded:
+                            if verbose:    click.echo("Empty response received, exiting read loop")
+                            break
+                        buffer.append(decoded)
+                        
+                        # Exit conditions
+                        if '>:' in decoded:
+                            break
+                        if decoded.startswith('!DSH_STOP'):
+                            response = ser.readline()  # Read one more line
+                            if response:
+                                buffer.append(response.decode('utf-8', errors='replace').strip())
+                            if verbose:    click.echo("Received !DSH_STOP, exiting read loop")
+                            break
+                            
+                    except UnicodeDecodeError:
+                        if verbose:    click.echo("UnicodeDecodeError encountered, skipping response")
+                        buffer.append(str(response))
+                
+                # Output all responses at once
+                if buffer:
+                    click.echo('\n'.join(buffer))
+            else:
+                # Normal command handling
+                response = ser.readline()
+                if response:
+                    click.echo(response.decode('utf-8', errors='replace').strip())
+                    
+                # Read additional output if any
+                while True:
+                    response = ser.readline()
+                    if not response or response == b'\r\n':
+                        break
+                    try:
+                        click.echo(response.decode('utf-8', errors='replace').strip())
+                    except UnicodeDecodeError:
+                        click.echo(response)
+            line_count += 1
+
+        except Exception as e:
+            click.echo(f"Error at line {line_count}: {str(e)}")
+            if verbose:
+                click.echo(f"Line content: {line}")
+            sys.exit(1)
 
 if __name__ == '__main__':
     try:

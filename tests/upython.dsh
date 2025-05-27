@@ -1,0 +1,4 @@
+#!/usr/bin/env dsh
+# Basic micropython script.
+loader open /ext/apps/Tools/upython.fap /ext/apps_assets/upython/tic_tac_toe.py
+{print("!  Success  !")}

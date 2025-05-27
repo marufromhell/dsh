@@ -24,12 +24,13 @@ else:
 
 ?
 
-hello_world
 
 
 #javascript
-upload full_test.js /ext/dsh_scripts/full_test1.js
+upload full_test.js /ext/dsh_scripts/full_test8922.js
+{print("uploaded full_test.js")}
 
-js /ext/dsh_scripts/full_test1.js
-hello_world {#because of the way javascript works on the flipper, you need a cli command after the js command, the specific command is not important, but it must be there}
+js /ext/dsh_scripts/full_test8972.js
+# also, use the stdio !DSH_STOP to stop early
+{print("!  Success  !")}
 
